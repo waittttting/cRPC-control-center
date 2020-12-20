@@ -4,7 +4,8 @@ import (
 	"flag"
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
-	"github.com/waittttting/cx-rpc/control_center/conf"
+	"github.com/waittttting/cRPC-control-center/conf"
+	"github.com/waittttting/cRPC-control-center/server"
 )
 
 func main() {
@@ -17,6 +18,6 @@ func main() {
 	if _, err := toml.DecodeFile(configPath, &config); err != nil {
 		logrus.Fatal(err)
 	}
-	ccs := NewControlCenterServer(&config)
+	ccs := server.NewControlCenterServer(&config)
 	ccs.Start()
 }

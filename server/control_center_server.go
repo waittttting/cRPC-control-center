@@ -1,8 +1,8 @@
-package main
+package server
 
 import (
 	"github.com/sirupsen/logrus"
-	"github.com/waittttting/cx-rpc/control_center/conf"
+	"github.com/waittttting/cRPC-control-center/conf"
 	"net"
 	"strconv"
 	"time"
