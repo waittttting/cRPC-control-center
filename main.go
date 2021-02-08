@@ -20,4 +20,5 @@ func main() {
 	}
 	ccs := server.NewControlCenterServer(&config)
 	ccs.Start()
+	select {}
 }

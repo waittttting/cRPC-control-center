@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/waittttting/cRPC-common/tcp"
 	"github.com/waittttting/cRPC-control-center/conf"
 	"net"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 type ControlCenterServer struct {
 	config *conf.CCSConf
 	receiveSocketChan chan *net.TCPConn
+
 }
 
 func NewControlCenterServer(config *conf.CCSConf) *ControlCenterServer {
@@ -33,47 +35,23 @@ func (ccs *ControlCenterServer) Start() {
 	ccs.clusterCommunication()
 	// 启动端口监听
 	ccs.acceptSocket()
+	// 处理接收到的 socket
+	logrus.Info("control server started")
 }
 
 // 集群通信
 func (ccs *ControlCenterServer) clusterCommunication() {
-
+	// todo: 集群内部依赖 Gossip 协议 进行通信
 }
 
 func (ccs *ControlCenterServer) acceptSocket() {
-	// 获取监听地址
-	addr, err := net.ResolveTCPAddr("tcp4", ":" + strconv.Itoa(ccs.config.Server.Port))
-	if err != nil {
-		logrus.Fatalf("resolve TCP addr error [%v]", err)
-	}
-	// 获取监听器
-	ln, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		logrus.Fatalf("listen TCP error [%v]", err)
-	}
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logrus.Errorf("access tcp_server occur panic: %v", r)
-			}
-		}()
-		for {
-			// 接收长连接
-			socket, err := ln.AcceptTCP()
-			if err != nil {
-				logrus.Errorf("accept TCP error [%v]", err)
-			}
-			timer := time.NewTimer( 200 * time.Millisecond)
-			select {
-			case ccs.receiveSocketChan <- socket:
-				timer.Reset(0)
-				logrus.Infof("socket accepted [%v]", socket.RemoteAddr())
-			case <-timer.C:
-				timer.Reset(0)
-				socket.Close()
-				logrus.Errorf("receive socket timeout")
-			}
-		}
-	}()
+	tcp.AcceptSocket(strconv.Itoa(ccs.config.Server.Port), ccs.receiveSocketChan, 3 * time.Second)
+}
+
+func (ccs *ControlCenterServer)handleSocket() {
+
+	for socket := range ccs.receiveSocketChan {
+		logrus.Infof("socket addr = %v", socket.RemoteAddr())
+	}
 }
