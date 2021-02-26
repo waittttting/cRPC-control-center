@@ -9,6 +9,8 @@ type Server struct {
 	Port int
 	// 接收 socket 队列的长度
 	ReceiveSocketChanLen int
+	// 接收 serviceConn 队列的长度
+	ReceiveServiceConnChanLen int
 }
 
 type Redis struct {
