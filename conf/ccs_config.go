@@ -1,8 +1,9 @@
 package conf
 
 type CCSConf struct {
-	Server Server
-	Redis Redis
+	Server    Server
+	Redis     Redis
+	TimeWheel TimeWheel
 }
 
 type Server struct {
@@ -14,7 +15,13 @@ type Server struct {
 }
 
 type Redis struct {
-	Host string
-	Pwd string
+	Host  string
+	Pwd   string
 	Index int
+}
+
+type TimeWheel struct {
+	Cap           int
+	Timeout       int
+	NoticeChanLen int
 }
