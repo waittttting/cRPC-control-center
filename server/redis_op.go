@@ -1,11 +1,13 @@
 package server
 
 import (
-	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
-	"github.com/waittttting/cRPC-common/tcp"
+	"github.com/waittttting/cRPC-control-center/conf"
 )
+
+
+var RedisCli *redis.Client
 
 type redisOp int
 
@@ -14,33 +16,54 @@ const (
 	redisOpSRemServerIp = 2
 )
 
-func (ccs *ControlCenterServer)redisOp(message *tcp.Message, conn *tcp.Connection, op redisOp) error {
+func RedisInit(conf conf.CCSConf) {
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     ccs.config.Redis.Host,
-		Password: ccs.config.Redis.Pwd,
-		DB:       ccs.config.Redis.Index,
+	RedisCli = redis.NewClient(&redis.Options{
+		Addr:     conf.Redis.Host,
+		Password: conf.Redis.Pwd,
+		DB:       conf.Redis.Index,
 	})
+}
 
-	_, err := client.Ping().Result()
+func RedisOp(key, value string, op redisOp) error {
+
+	_, err := RedisCli.Ping().Result()
 	if err != nil {
 		return err
 	}
-
-	key := fmt.Sprintf("%s:%s", message.Header.ServerName, message.Header.ServerVersion)
 
 	switch op {
 	case redisOpSAddServerIp:
-		logrus.Infof("register info: key: %v, ip: %v", key, conn.IP)
-		_, err = client.SAdd(key, conn.IP).Result()
+		logrus.Infof("register info: key: [%v], ip: [%v]", key, value)
+		_, err = RedisCli.SAdd(key, value).Result()
 	case redisOpSRemServerIp:
-		logrus.Infof("delete info: key: %v, ip: %v", key, conn.IP)
-		_, err = client.SRem(key, conn.IP).Result()
+		logrus.Infof("delete info: key: [%v], ip: [%v]", key, value)
+		_, err = RedisCli.SRem(key, value).Result()
 	}
 	if err != nil {
 		return err
 	}
-	logrus.Infof("redis client set, key: %v, value: %v", key, client.SMembers(key))
-	client.Close()
+	logrus.Infof("redis client set, key: [%v], value: [%v]", key, RedisCli.SMembers(key))
 	return nil
+}
+
+const serverOnLinAndOffLine = "serverOnLinAndOffLine"
+
+func RedisSubServerOnLine() (<-chan *redis.Message, error) {
+
+	pubSub := RedisCli.Subscribe(serverOnLinAndOffLine)
+	_, err :=pubSub.Receive()
+	if err != nil {
+		return nil, err
+	}
+	ch := pubSub.Channel()
+	return ch, nil
+}
+
+func RedisPubOnLine() {
+	RedisCli.Publish(serverOnLinAndOffLine, "1")
+}
+
+func RedisPubOffline() {
+	RedisCli.Publish(serverOnLinAndOffLine, "2")
 }

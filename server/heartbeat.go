@@ -15,7 +15,7 @@ func (ccs *ControlCenterServer) heartbeatTimeWheelStart() {
 			sc := inter.(*serviceConn)
 			logrus.Infof("heartbeat timeout %s", sc.gid.String())
 			// todo: 接收消息超时的逻辑是否写全
-			sc.offLine("heartbeat timeout")
+			sc.LetScOffLine("heartbeat timeout")
 			ccs.timeWheel.Delete(sc)
 		}
 	}()

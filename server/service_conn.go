@@ -14,11 +14,14 @@ type serviceConn struct {
 	gid            *tcp.GID
 	heartbeatTime  time.Time
 	ccs            *ControlCenterServer
+	redisKey       string
+	redisValue     string
 }
 
 func (sc *serviceConn) loop() {
 
 	// todo: 上线记录
+	sc.open()
 	defer func() {
 		if err := recover(); err != nil {
 			logrus.Errorf("serviceConn loop panic serviceName: %v, serviceVersion: %v, err: %v", sc.serviceName, sc.serviceVersion, err)
@@ -36,14 +39,19 @@ func (sc *serviceConn) loop() {
 	logrus.Infof("complete loop gid: %s", sc.gid.String())
 	// 关闭 sc
 	sc.close()
-	// todo: 下线记录，如何通知其他 ccs 上 <订阅了本服务的服务>，本服务下线了？
+}
+
+
+func (sc *serviceConn) open() {
+	logrus.Infof("service conn onLine")
+	RedisPubOnLine()
 }
 
 /**
- * @Description: 节点下线
+ * @Description: 使节点下线
  * @receiver sc
  */
-func (sc *serviceConn) offLine(cause string) {
+func (sc *serviceConn) LetScOffLine(cause string) {
 	logrus.Infof("service conn offLine, cause:[%v]", cause)
 	sc.exit = true
 	sc.conn.Close() // 触发 sc.loop 内的 for 循环执行一次
@@ -65,7 +73,7 @@ func (sc *serviceConn) close() {
 	// 删除 ccs 内的 sc 信息
 	sc.ccs.lock.Lock()
 	defer sc.ccs.lock.Unlock()
-	curS := sc.ccs.clientMap[sc.gid.NameAndVersion()]
+	curS := sc.ccs.clientMap[sc.gid.ServiceName]
 	if curS == nil {
 		logrus.Error("not find sc from ccs.clientMap")
 	} else {
@@ -78,10 +86,13 @@ func (sc *serviceConn) close() {
 		curS = append(curS[:index], curS[index+1:]...)
 	}
 
-	sc.ccs.deleteHeartbeat(sc)                                                      // 清除 time wheel
-	err := sc.ccs.redisOp(sc.gid.NameAndVersion(), sc.conn.IP, redisOpSRemServerIp) // 清除 redis 信息
+	sc.ccs.deleteHeartbeat(sc) // 清除 time wheel
+	err := RedisOp(sc.redisKey, sc.redisValue, redisOpSRemServerIp) // 清除 redis 信息
 	if err != nil {
 		// 报警，人工介入
-		logrus.Errorf("delete client ip from redis error: [%v]", err)
+		logrus.Errorf("delete client ip from redis error:[%v]", err)
 	}
+
+	// 通知其他 ccs 上 <订阅了本服务的服务>，本服务下线
+	RedisPubOffline()
 }
