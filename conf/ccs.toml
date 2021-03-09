@@ -10,5 +10,4 @@
 
 [timeWheel]
     cap = 20
-    timeout = 5
     noticeChanLen = 200

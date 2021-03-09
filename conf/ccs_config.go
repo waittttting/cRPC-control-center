@@ -22,6 +22,5 @@ type Redis struct {
 
 type TimeWheel struct {
 	Cap           int
-	Timeout       int
 	NoticeChanLen int
 }
